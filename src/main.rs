@@ -2,7 +2,7 @@ use image::{imageops::FilterType::Gaussian, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 use rusttype::{Font, Scale};
 use std::error::Error;
-use std::{env, fmt};
+use std::{env, fmt, io::Write};
 
 const ASCII: &str = "@%#?+=:-. ";
 // const ASCII: &str = "$@#W9876543210?!abc;:+=-,_.";
@@ -46,12 +46,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     img = img.resize(scaling, scaling, Gaussian);
 
     println!(
-        "image width, height after resize: {}, {}",
+        "image width, height after resize: {}*17, {}*17",
         img.width(),
         img.height()
     );
 
-    let mut output: RgbImage = ImageBuffer::new(img.width() *15, img.height() * 15);
+    let mut output: RgbImage = ImageBuffer::new(img.width() * 17, img.height() * 17);
     for row in output.rows_mut() {
         for p in row {
             p[0] = 255;
@@ -60,18 +60,21 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    let scale = Scale { x: 17., y: 17. };
+    let scale = Scale { x: 20., y: 20. };
     let font_data: &[u8] = include_bytes!("../consolab.ttf");
     let mut font: Font<'static> = Font::try_from_bytes(font_data).unwrap();
 
-    let mut y: i32 = -14;
+    let mut y: i32 = -16;
     for row in img.clone().into_luma8().rows() {
-        y += 15;
-        let mut x: i32 = -12;
+        y += 17;
+        let mut x: i32 = -14;
+
         // print progress
-        println!("{}%", y / 15 * 100 / img.height() as i32);
+        print!("\r{}%", y / 17 * 100 / img.height() as i32);
+        std::io::stdout().flush()?;
+
         for p in row {
-            x += 15;
+            x += 17;
 
             let index = map_range((0., 255.), (0., (ASCII.len() - 1) as f64), p[0] as f64) as usize;
 
@@ -89,7 +92,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    println!("saving image...");
+    println!("\nsaving image...");
     // Write the contents of this image to the Writer in PNG format.
     output.save("output/output.png")?;
     println!("done!");
