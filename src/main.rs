@@ -9,11 +9,21 @@ const ASCII: &str = "@%#?+=:-. ";
 
 // custom error type
 #[derive(Debug)]
-struct ArgumentError;
+enum ArgumentError {
+    MissingArgument,
+    ScaleOutOfBound,
+}
 impl Error for ArgumentError {}
 impl fmt::Display for ArgumentError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Please provide path to the original image.")
+        match self {
+            ArgumentError::MissingArgument => {
+                write!(f, "Please provide path to the original image.")
+            }
+            ArgumentError::ScaleOutOfBound => {
+                write!(f, "The scaling factor should be between 0 and 1.")
+            }
+        }
     }
 }
 
@@ -22,8 +32,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // error if didn't provide file name
     if args.len() == 1 {
-        println!("{}", ArgumentError);
-        return Err(ArgumentError.into());
+        eprintln!("{}", ArgumentError::MissingArgument);
+        return Err(ArgumentError::MissingArgument.into());
     }
 
     // Use the open function to load an image from a Path.
@@ -35,7 +45,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         0.33
     } else {
         match args[2].parse() {
-            Ok(n) => n,
+            Ok(n) => {
+                if 0. < n && n <= 1. {
+                    n
+                } else {
+                    eprintln!("{}", ArgumentError::ScaleOutOfBound);
+                    return Err(ArgumentError::ScaleOutOfBound.into());
+                }
+            }
             Err(e) => panic!("{}", e),
         }
     };
