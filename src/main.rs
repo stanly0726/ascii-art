@@ -134,6 +134,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
+    // determine output image brightness
+    let output_brightness: i32 = resize(&output.clone(), 1, 1, Gaussian).get_pixel(0, 0)[0].into();
+    println!("output image brightness: {:?}", output_brightness);
+
+    // // darken or lighten output image
+    brighten_in_place(
+        &mut output,
+        ((original_brightness as i32 - output_brightness as i32) as f32 / 1.5).floor() as i32,
+    );
+
     println!("\nsaving image...");
     // Write the contents of this image to the Writer in PNG format.
     grayscale(&output).save("output/output.png")?;
