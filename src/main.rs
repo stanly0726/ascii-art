@@ -32,9 +32,6 @@ impl fmt::Display for ArgumentError {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let ascii: &str = "@%#?+=:-. ";
-    // const ASCII: &str = "$@#W9876543210?!abc;:+=-,_.";
-
     let args: Vec<String> = env::args().collect();
 
     // error if didn't provide file name
@@ -66,7 +63,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // constrain the greater axis
     let scaling: u32 = (scaling * std::cmp::max(img.width(), img.height()) as f64) as u32;
-
     img = img.resize(scaling, scaling, Gaussian);
 
     // determine background color (greater the brighter)
@@ -79,8 +75,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("original image brightness: {:?}", original_brightness);
     // configure color using result above
     let (mut background_color, mut text_color): (u8, u8) = (255, 0);
+
+    let ascii: &str;
     if original_brightness < 110 {
         (background_color, text_color) = (0, 255);
+        // ascii = " .:=+?#@";
+        ascii = " .-:=!+c?a#%&@";
+    } else {
+        // ascii = "@#?+=:. ";
+        ascii = "@&%#a?c+!=:-. ";
     }
 
     println!(
@@ -116,9 +119,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             let mut index =
                 map_range((0., 255.), (0., (ascii.len() - 1) as f64), p[0] as f64) as usize;
-            if original_brightness < 110 {
-                index = ascii.len() - 1 - index;
-            }
 
             let text = ascii.chars().nth(index).unwrap().to_string();
 
