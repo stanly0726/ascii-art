@@ -1,11 +1,15 @@
-use image::{imageops::FilterType::Gaussian, ImageBuffer, Rgb, RgbImage};
+use image::{
+    imageops::{
+        colorops::{brighten_in_place, grayscale},
+        resize,
+        FilterType::Gaussian,
+    },
+    GrayImage, ImageBuffer, Luma, Rgb, RgbImage,
+};
 use imageproc::drawing::draw_text_mut;
 use rusttype::{Font, Scale};
 use std::error::Error;
 use std::{env, fmt, io::Write};
-
-const ASCII: &str = "@%#?+=:-. ";
-// const ASCII: &str = "$@#W9876543210?!abc;:+=-,_.";
 
 // custom error type
 #[derive(Debug)]
@@ -28,6 +32,9 @@ impl fmt::Display for ArgumentError {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let ascii: &str = "@%#?+=:-. ";
+    // const ASCII: &str = "$@#W9876543210?!abc;:+=-,_.";
+
     let args: Vec<String> = env::args().collect();
 
     // error if didn't provide file name
@@ -62,6 +69,20 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     img = img.resize(scaling, scaling, Gaussian);
 
+    // determine background color (greater the brighter)
+    let original_brightness: i32 = img
+        .clone()
+        .resize(1, 1, Gaussian)
+        .into_luma8()
+        .get_pixel(0, 0)[0]
+        .into();
+    println!("original image brightness: {:?}", original_brightness);
+    // configure color using result above
+    let (mut background_color, mut text_color): (u8, u8) = (255, 0);
+    if original_brightness < 110 {
+        (background_color, text_color) = (0, 255);
+    }
+
     println!(
         "image width, height after resize: {}*17, {}*17",
         img.width(),
@@ -71,9 +92,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut output: RgbImage = ImageBuffer::new(img.width() * 17, img.height() * 17);
     for row in output.rows_mut() {
         for p in row {
-            p[0] = 255;
-            p[1] = 255;
-            p[2] = 255;
+            p[0] = background_color;
+            p[1] = background_color;
+            p[2] = background_color;
         }
     }
 
@@ -93,13 +114,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         for p in row {
             x += 17;
 
-            let index = map_range((0., 255.), (0., (ASCII.len() - 1) as f64), p[0] as f64) as usize;
+            let mut index =
+                map_range((0., 255.), (0., (ascii.len() - 1) as f64), p[0] as f64) as usize;
+            if original_brightness < 110 {
+                index = ascii.len() - 1 - index;
+            }
 
-            let text = ASCII.chars().nth(index).unwrap().to_string();
+            let text = ascii.chars().nth(index).unwrap().to_string();
 
             draw_text_mut(
                 &mut output,
-                Rgb([0u8, 0u8, 0u8]),
+                Rgb([text_color, text_color, text_color]),
                 x,
                 y,
                 scale,
@@ -111,7 +136,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("\nsaving image...");
     // Write the contents of this image to the Writer in PNG format.
-    output.save("output/output.png")?;
+    grayscale(&output).save("output/output.png")?;
+    img.save("output/original.png")?;
     println!("done!");
     Ok(())
 }
