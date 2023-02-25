@@ -4,7 +4,7 @@ use image::{
         resize,
         FilterType::Gaussian,
     },
-    GrayImage, ImageBuffer, Luma, Rgb, RgbImage,
+    ImageBuffer, Pixel, RgbImage,
 };
 use imageproc::drawing::draw_text_mut;
 use rusttype::{Font, Scale};
@@ -44,9 +44,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     // `open` returns a `DynamicImage` on success.
     let mut img = image::open(&args[1])?;
 
-    // default to third of original resolution
+    // default to 0.15 of original resolution
     let scaling: f64 = if args.len() == 2 {
-        0.33
+        0.15
     } else {
         match args[2].parse() {
             Ok(n) => {
@@ -101,14 +101,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    let scale = Scale { x: 20., y: 20. };
+    let scale = Scale { x: 27.5, y: 27.5 };
     let font_data: &[u8] = include_bytes!("../consolab.ttf");
     let mut font: Font<'static> = Font::try_from_bytes(font_data).unwrap();
 
-    let mut y: i32 = -16;
-    for row in img.clone().into_luma8().rows() {
+    let mut y: i32 = -21;
+    for row in img.clone().into_rgb8().rows() {
         y += 17;
-        let mut x: i32 = -14;
+        let mut x: i32 = -17;
 
         // print progress
         print!("\r{}%", y / 17 * 100 / img.height() as i32);
@@ -117,20 +117,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         for p in row {
             x += 17;
 
-            let mut index =
-                map_range((0., 255.), (0., (ascii.len() - 1) as f64), p[0] as f64) as usize;
+            let index = map_range(
+                (0., 255.),
+                (0., (ascii.len() - 1) as f64),
+                p.to_luma()[0] as f64,
+            ) as usize;
 
             let text = ascii.chars().nth(index).unwrap().to_string();
 
-            draw_text_mut(
-                &mut output,
-                Rgb([text_color, text_color, text_color]),
-                x,
-                y,
-                scale,
-                &mut font,
-                text.as_str(),
-            );
+            draw_text_mut(&mut output, *p, x, y, scale, &mut font, text.as_str());
         }
     }
 
@@ -146,7 +141,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("\nsaving image...");
     // Write the contents of this image to the Writer in PNG format.
-    grayscale(&output).save("output/output.png")?;
+    // grayscale(&output).save("output/output.png")?;
+    output.save("output/output.png")?;
     img.save("output/original.png")?;
     println!("done!");
     Ok(())
